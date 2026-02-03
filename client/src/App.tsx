@@ -5,11 +5,18 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import TripCreation from "./pages/TripCreation";
+import TripDetails from "./pages/TripDetails";
+import MyTrips from "./pages/MyTrips";
 
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/create-trip"} component={TripCreation} />
+      <Route path={"/trips"} component={MyTrips} />
+      <Route path={"/trips/:tripId"} component={TripDetails} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
