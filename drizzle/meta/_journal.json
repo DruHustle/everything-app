@@ -1,5 +1,34 @@
 {
   "version": "7",
   "dialect": "mysql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1770082013685,
+      "tag": "0000_cynical_doctor_doom",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1770082263799,
+      "tag": "0001_rare_proteus",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1770082284821,
+      "tag": "0002_special_infant_terrible",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1770082308407,
+      "tag": "0003_lonely_may_parker",
+      "breakpoints": true
+    }
+  ]
 }
