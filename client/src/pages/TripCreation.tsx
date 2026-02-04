@@ -6,6 +6,8 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
+import { Loader2, Sparkles, Plus, Star } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface DraftTrip {
   destination: string;
@@ -58,19 +60,29 @@ export default function TripCreation() {
     },
   });
 
-  const handleAddActivity = () => {
-    if (!newActivity.title.trim()) {
+  const { data: recommendations, isLoading: isRecommending, refetch: getRecommendations } = trpc.recommendations.getActivities.useQuery(
+    { 
+      destination: trip.destination,
+      budget: trip.budget,
+      limit: 5
+    },
+    { enabled: false }
+  );
+
+  const handleAddActivity = (activityData?: any) => {
+    const title = activityData?.title || newActivity.title;
+    if (!title.trim()) {
       toast.error("Activity title is required");
       return;
     }
 
     const activity = {
-      id: `activity-${Date.now()}`,
-      title: newActivity.title,
-      date: newActivity.date,
-      time: newActivity.time,
-      location: newActivity.location,
-      notes: newActivity.notes,
+      id: `activity-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title: title,
+      date: activityData?.date || newActivity.date,
+      time: activityData?.time || newActivity.time,
+      location: activityData?.location || newActivity.location,
+      notes: activityData?.notes || newActivity.notes || activityData?.description,
     };
 
     setTrip({
@@ -78,13 +90,15 @@ export default function TripCreation() {
       activities: [...trip.activities, activity],
     });
 
-    setNewActivity({
-      title: "",
-      date: trip.startDate,
-      time: "",
-      location: "",
-      notes: "",
-    });
+    if (!activityData) {
+      setNewActivity({
+        title: "",
+        date: trip.startDate,
+        time: "",
+        location: "",
+        notes: "",
+      });
+    }
 
     toast.success("Activity added!");
   };
@@ -110,7 +124,6 @@ export default function TripCreation() {
     // If not authenticated, prompt login
     if (!isAuthenticated) {
       toast.error("Please log in to save your trip");
-      // TODO: Redirect to login
       return;
     }
 
@@ -155,11 +168,21 @@ export default function TripCreation() {
               <CardContent className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Destination</label>
-                  <Input
-                    placeholder="e.g., Paris, France"
-                    value={trip.destination}
-                    onChange={(e) => setTrip({ ...trip, destination: e.target.value })}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g., Paris, France"
+                      value={trip.destination}
+                      onChange={(e) => setTrip({ ...trip, destination: e.target.value })}
+                    />
+                    <Button 
+                      variant="secondary" 
+                      onClick={() => getRecommendations()}
+                      disabled={!trip.destination || isRecommending}
+                    >
+                      {isRecommending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                      Get AI Suggestions
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -207,6 +230,46 @@ export default function TripCreation() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* AI Recommendations */}
+            {recommendations?.activities && recommendations.activities.length > 0 && (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    AI Recommendations for {trip.destination}
+                  </CardTitle>
+                  <CardDescription>Based on your destination and budget</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {recommendations.activities.map((rec: any, idx: number) => (
+                      <div key={idx} className="p-4 bg-background rounded-lg border flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-bold">{rec.title}</h4>
+                            <Badge variant="outline">{rec.category}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">{rec.description}</p>
+                          <div className="flex items-center gap-4 text-xs">
+                            <span className="flex items-center gap-1"><Star className="h-3 w-3 text-yellow-500 fill-yellow-500" /> {rec.rating}</span>
+                            <span>Est. Cost: ${rec.cost}</span>
+                          </div>
+                        </div>
+                        <Button size="sm" onClick={() => handleAddActivity({
+                          title: rec.title,
+                          location: rec.location,
+                          notes: rec.description,
+                          date: trip.startDate
+                        })}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Add Activities */}
             <Card>
@@ -263,7 +326,7 @@ export default function TripCreation() {
                   />
                 </div>
 
-                <Button onClick={handleAddActivity} className="w-full">
+                <Button onClick={() => handleAddActivity()} className="w-full">
                   Add Activity
                 </Button>
               </CardContent>
@@ -285,7 +348,7 @@ export default function TripCreation() {
                         <div className="flex-1">
                           <h4 className="font-semibold">{activity.title}</h4>
                           <p className="text-sm text-muted-foreground">
-                            {activity.date.toLocaleDateString()}
+                            {new Date(activity.date).toLocaleDateString()}
                             {activity.time && ` at ${activity.time}`}
                           </p>
                           {activity.location && (

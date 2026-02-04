@@ -64,7 +64,7 @@ CREATE TABLE users (
 
 **Fields:**
 - `id`: Unique user identifier
-- `openId`: Manus OAuth identifier
+- `openId`: Everything App OAuth identifier
 - `name`: User's display name
 - `email`: User's email address
 - `loginMethod`: Authentication method (oauth, email, etc.)

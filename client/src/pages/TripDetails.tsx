@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Calendar, MapPin, AlertCircle, Cloud } from "lucide-react";
-import { toast } from "sonner";
+import { Loader2, Calendar, MapPin, AlertCircle, Cloud, Thermometer, Wind, Droplets } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 /**
  * Trip Details Page
@@ -26,6 +26,21 @@ export default function TripDetails() {
   } = trpc.trips.getWithDetails.useQuery(
     { tripId: tripId || 0 },
     { enabled: !!tripId }
+  );
+
+  // Mock coordinates for weather/alerts if not available in trip data
+  // In a real app, these would come from the destination geocoding
+  const lat = 48.8566; 
+  const lon = 2.3522;
+
+  const { data: weatherData, isLoading: isWeatherLoading } = trpc.weather.getForecast.useQuery(
+    { latitude: lat, longitude: lon, days: 7 },
+    { enabled: activeMode === "weather" }
+  );
+
+  const { data: alertsData, isLoading: isAlertsLoading } = trpc.alerts.getEmergencies.useQuery(
+    { latitude: lat, longitude: lon, radiusKm: 500 },
+    { enabled: activeMode === "alerts" }
   );
 
   if (!tripId) {
@@ -62,6 +77,17 @@ export default function TripDetails() {
   const activities = (trip.tripData?.activities as any[]) || [];
   const budget = trip.tripData?.budget;
   const travelers = trip.tripData?.travelers || 1;
+
+  const getWeatherIcon = (code: number) => {
+    if (code === 0) return "☀️";
+    if (code <= 3) return "☁️";
+    if (code <= 48) return "🌫️";
+    if (code <= 67) return "🌧️";
+    if (code <= 77) return "❄️";
+    if (code <= 82) return "🌦️";
+    if (code <= 99) return "⛈️";
+    return "❓";
+  };
 
   return (
     <div className="min-h-screen bg-background py-8">
@@ -161,7 +187,7 @@ export default function TripDetails() {
               <CardHeader>
                 <CardTitle>Calendar View</CardTitle>
                 <CardDescription>
-                  Your activities organized by date. Drag and drop to reschedule.
+                  Your activities organized by date.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -272,16 +298,36 @@ export default function TripDetails() {
                   Weather Forecast
                 </CardTitle>
                 <CardDescription>
-                  Real-time weather data for your destination
+                  7-day weather forecast for {trip.name}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <p className="mb-2">Weather integration coming soon</p>
-                  <p className="text-sm">
-                    We'll display Open-Meteo weather forecasts for your destination
-                  </p>
-                </div>
+                {isWeatherLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="animate-spin h-8 w-8" />
+                  </div>
+                ) : weatherData?.forecast ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                    {weatherData.forecast.map((day: any, idx: number) => (
+                      <div key={idx} className="p-4 border rounded-lg text-center bg-muted/30">
+                        <p className="text-sm font-medium mb-2">
+                          {new Date(day.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                        </p>
+                        <div className="text-3xl mb-2">{getWeatherIcon(day.weatherCode)}</div>
+                        <div className="flex justify-center gap-2 mb-2">
+                          <span className="font-bold">{Math.round(day.temperatureMax)}°</span>
+                          <span className="text-muted-foreground">{Math.round(day.temperatureMin)}°</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                          <Droplets className="h-3 w-3" />
+                          {day.precipitation}mm
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center py-8 text-muted-foreground">No weather data available</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -295,16 +341,51 @@ export default function TripDetails() {
                   Safety Alerts
                 </CardTitle>
                 <CardDescription>
-                  Emergency and weather alerts for your destination
+                  Emergency alerts for {trip.name} and surrounding areas
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <p className="mb-2">Alert integration coming soon</p>
-                  <p className="text-sm">
-                    We'll display GDACS emergency alerts and safety recommendations
-                  </p>
-                </div>
+                {isAlertsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="animate-spin h-8 w-8" />
+                  </div>
+                ) : alertsData?.alerts && alertsData.alerts.length > 0 ? (
+                  <div className="space-y-4">
+                    {alertsData.alerts.map((alert: any, idx: number) => (
+                      <div key={idx} className="p-4 border rounded-lg border-l-4 border-l-destructive bg-destructive/5">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant={alert.severity === 'Red' ? 'destructive' : 'outline'}>
+                                {alert.severity}
+                              </Badge>
+                              <h3 className="font-bold">{alert.type}</h3>
+                            </div>
+                            <p className="font-medium mb-1">{alert.location}</p>
+                            <p className="text-sm text-muted-foreground mb-2">{alert.description}</p>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <span>{new Date(alert.timestamp).toLocaleString()}</span>
+                              {alert.externalLink && (
+                                <a href={alert.externalLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                  More Info
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-4 p-3 bg-background rounded border text-sm">
+                          <p className="font-semibold mb-1">Safety Recommendation:</p>
+                          <p>Stay away from affected areas. Follow local authority instructions and monitor local news for updates.</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No active emergency alerts for this destination.</p>
+                    <p className="text-sm mt-2">Always stay informed of local conditions during your trip.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

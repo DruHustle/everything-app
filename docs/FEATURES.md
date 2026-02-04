@@ -112,7 +112,7 @@ This document outlines all implemented and planned features for the Everything A
 ### 6. Authentication
 
 **OAuth Integration**
-- Manus OAuth support
+- Everything App OAuth support
 - Session-based authentication
 - Protected procedures for authenticated users
 - Public procedures for anonymous users
@@ -128,7 +128,7 @@ This document outlines all implemented and planned features for the Everything A
 - Hero section with call-to-action
 - Feature highlights with icons
 - Clean, professional design
-- No Manus branding
+- No Everything App branding
 
 **Navigation**
 - Header with user authentication status

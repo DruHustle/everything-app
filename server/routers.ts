@@ -5,6 +5,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
+import { invokeLLM } from "./_core/llm";
 
 /**
  * Trips Router - Manage trip creation, retrieval, and updates
@@ -321,7 +322,7 @@ const weatherRouter = router({
             longitude: input.longitude,
           },
           forecast: data.daily.time.slice(0, input.days).map((date: string, i: number) => ({
-            date: new Date(date),
+            date: date,
             temperatureMax: data.daily.temperature_2m_max[i],
             temperatureMin: data.daily.temperature_2m_min[i],
             precipitation: data.daily.precipitation_sum[i],
@@ -362,23 +363,38 @@ const alertsRouter = router({
         }
 
         const data = await response.json();
+        const events = Array.isArray(data) ? data : (data.features || data.events || []);
 
-        // Filter by proximity (simplified - in production, use proper geospatial queries)
-        const alerts = data.events
-          .slice(0, 20)
-          .map((event: any) => ({
-            id: event.eventid,
-            type: event.eventtype,
-            severity: event.severity,
-            location: event.eventname,
-            description: event.description || event.eventname,
-            timestamp: new Date(event.eventdate),
-            coordinates: {
-              latitude: parseFloat(event.lat),
-              longitude: parseFloat(event.lon),
-            },
-            externalLink: event.url,
-          }));
+        const alerts = events
+          .map((event: any) => {
+            const properties = event.properties || event;
+            const geometry = event.geometry || {};
+            const coords = geometry.coordinates || [properties.lon, properties.lat];
+            
+            return {
+              id: properties.eventid || properties.id,
+              type: properties.eventtype || properties.type,
+              severity: properties.severity || properties.alertlevel || "info",
+              location: properties.eventname || properties.name || properties.description,
+              description: properties.description || properties.eventname,
+              timestamp: properties.eventdate || properties.fromdate,
+              coordinates: {
+                latitude: parseFloat(coords[1] || properties.lat),
+                longitude: parseFloat(coords[0] || properties.lon),
+              },
+              externalLink: properties.url || properties.htmllink,
+            };
+          })
+          .filter((alert: any) => {
+            if (!input.latitude || !input.longitude) return true;
+            const dist = Math.sqrt(
+              Math.pow(alert.coordinates.latitude - input.latitude, 2) +
+              Math.pow(alert.coordinates.longitude - input.longitude, 2)
+            );
+            // Rough conversion: 1 degree ~ 111km
+            return dist * 111 <= input.radiusKm;
+          })
+          .slice(0, 20);
 
         return { alerts, totalCount: alerts.length };
       } catch (error) {
@@ -469,35 +485,39 @@ const recommendationsRouter = router({
       })
     )
     .query(async ({ input }) => {
-      // Placeholder for activity recommendations
-      const sampleActivities = [
-        {
-          id: "1",
-          title: "City Walking Tour",
-          description: "Explore the historic city center",
-          category: "sightseeing",
-          location: input.destination,
-          coordinates: { latitude: 0, longitude: 0 },
-          duration: 3,
-          cost: 50,
-          rating: 4.6,
-          reviews: "Great tour with knowledgeable guide",
-        },
-        {
-          id: "2",
-          title: "Local Food Experience",
-          description: "Taste authentic local cuisine",
-          category: "dining",
-          location: input.destination,
-          coordinates: { latitude: 0, longitude: 0 },
-          duration: 2,
-          cost: 80,
-          rating: 4.8,
-          reviews: "Delicious food and great atmosphere",
-        },
-      ];
+      try {
+        const prompt = `Suggest ${input.limit} activities, restaurants, and attractions for a trip to ${input.destination}.
+        Interests: ${input.interests?.join(", ") || "General"}
+        Budget: ${input.budget ? `$${input.budget}` : "Flexible"}
+        Duration: ${input.duration ? `${input.duration} days` : "Flexible"}
+        
+        Return a JSON object with an "activities" array. Each activity should have:
+        - id: string
+        - title: string
+        - description: string
+        - category: "sightseeing" | "dining" | "adventure" | "culture"
+        - location: string
+        - cost: number (estimated in USD)
+        - rating: number (1-5)
+        - reviews: string (short summary)`;
 
-      return { activities: sampleActivities.slice(0, input.limit) };
+        const result = await invokeLLM({
+          messages: [
+            { role: "system", content: "You are a travel recommendation expert." },
+            { role: "user", content: prompt }
+          ],
+          responseFormat: { type: "json_object" }
+        });
+
+        const content = typeof result.choices[0].message.content === 'string' 
+          ? JSON.parse(result.choices[0].message.content)
+          : result.choices[0].message.content;
+          
+        return { activities: content.activities || [] };
+      } catch (error) {
+        console.error("AI Recommendation error:", error);
+        return { activities: [] };
+      }
     }),
 
   optimizeItinerary: protectedProcedure

@@ -51,7 +51,7 @@ The Everything App follows a **layered, modular architecture** designed for scal
 │  ├─ GDACS (Emergency Alerts)                                │
 │  ├─ Amadeus (Travel Data)                                   │
 │  ├─ Duffel (Booking)                                        │
-│  └─ Manus Forge (LLM & Storage)                             │
+│  └─ Everything App Forge (LLM & Storage)                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -275,7 +275,7 @@ export async function updateTripData(tripId: string, data: Partial<TripData>) {
 
 ### OAuth Flow
 1. User clicks "Login" button
-2. Redirected to Manus OAuth portal
+2. Redirected to Everything App OAuth portal
 3. OAuth callback returns session token
 4. Session cookie set with JWT
 5. User authenticated for protected procedures

@@ -70,8 +70,8 @@ A comprehensive travel planning application that combines intelligent scheduling
 - **Runtime:** Node.js with Express 4
 - **API Layer:** tRPC 11 with type safety
 - **Database:** MySQL/TiDB with Drizzle ORM
-- **Authentication:** Manus OAuth
-- **AI Integration:** LLM via Manus Forge API
+- **Authentication:** Everything App OAuth
+- **AI Integration:** LLM via Everything App Forge API
 
 ### External APIs
 - **Weather:** Open-Meteo (free, no API key required)
@@ -147,7 +147,7 @@ See [API.md](./docs/API.md) for complete API reference.
 - Node.js 18+
 - npm or pnpm
 - MySQL/TiDB database instance
-- Manus OAuth credentials
+- Everything App OAuth credentials
 
 ### Installation
 
@@ -175,14 +175,14 @@ pnpm dev
 DATABASE_URL=mysql://user:password@host:port/database
 JWT_SECRET=your-secret-key
 VITE_APP_ID=your-app-id
-OAUTH_SERVER_URL=https://api.manus.im
-VITE_OAUTH_PORTAL_URL=https://manus.im
+OAUTH_SERVER_URL=https://api.everything-app.im
+VITE_OAUTH_PORTAL_URL=https://everything-app.im
 OWNER_OPEN_ID=your-open-id
 OWNER_NAME=Your Name
-BUILT_IN_FORGE_API_URL=https://forge.manus.im
+BUILT_IN_FORGE_API_URL=https://forge.everything-app.im
 BUILT_IN_FORGE_API_KEY=your-api-key
 VITE_FRONTEND_FORGE_API_KEY=your-frontend-key
-VITE_FRONTEND_FORGE_API_URL=https://forge.manus.im
+VITE_FRONTEND_FORGE_API_URL=https://forge.everything-app.im
 ```
 
 ## Project Structure
@@ -255,7 +255,7 @@ pnpm start
 
 ## Deployment
 
-The application is designed for deployment on Manus, Vercel, or Northflank:
+The application is designed for deployment on Everything App, Vercel, or Northflank:
 
 1. **Frontend:** Deploy via Vercel or Northflank
 2. **Backend:** Deploy via Northflank or Railway
@@ -296,4 +296,4 @@ For issues, questions, or suggestions, please open an issue on GitHub or contact
 - Open-Meteo for weather data
 - GDACS for emergency alerts
 - Amadeus for travel data
-- Manus platform for infrastructure
+- Everything App platform for infrastructure

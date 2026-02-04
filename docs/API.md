@@ -14,7 +14,7 @@ Accessible without authentication:
 - Initial trip creation (anonymous)
 
 ### Protected Procedures
-Require Manus OAuth authentication:
+Require Everything App OAuth authentication:
 - Trip management (save, update, delete)
 - Itinerary operations
 - Booking management
